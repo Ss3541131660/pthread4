@@ -5,18 +5,16 @@
 #define NUM_THREADS 4
 using namespace std;
 int n = 1024;
-float** A = new float* [n];
-int p = 0;
-float** pA = new float* [n];
+float pA[1024][1024];
 pthread_mutex_t mutex;
 
 typedef struct {
-	int k;          // ÏûÈ¥µÄÂÖ´Î
-	int t_id;       // Ïß³Ìid
+	int k;          // æ¶ˆåŽ»çš„è½®æ¬¡
+	int t_id;       // çº¿ç¨‹id
 } threadParam_t;
-//½á¹¹Ìå¶¨Òå
+//ç»“æž„ä½“å®šä¹‰
 
-//barrier¶¨Òå
+//barrierå®šä¹‰
 pthread_barrier_t barrier_Divsion;
 pthread_barrier_t barrier_Elimination;
 
@@ -25,47 +23,42 @@ void* threadFunc(void* param) {
 	int t_id = p->t_id;
 
 	for (int k = 0; k < n; ++k) {
-		if (t_id == 0) {//Ñ¡³öÒ»¸öt_idÎª0µÄÏß³Ì×ö³ý·¨²Ù×÷£¬ÆäËû¹¤×÷Ïß³ÌµÈ´ý
+		if (t_id == 0) {//é€‰å‡ºä¸€ä¸ªt_idä¸º0çš„çº¿ç¨‹åšé™¤æ³•æ“ä½œï¼Œå…¶ä»–å·¥ä½œçº¿ç¨‹ç­‰å¾…
 			for (int j = k + 1; j < n; j++) {
 				pA[k][j] = pA[k][j] / pA[k][k];
 			}
 			pA[k][k] = 1.0;
 		}
-		//µÚÒ»¸öÍ¬²½µã
+		//ç¬¬ä¸€ä¸ªåŒæ­¥ç‚¹
 		pthread_barrier_wait(&barrier_Divsion);
 
-		// Ñ­»·»®·ÖÈÎÎñ
+		// å¾ªçŽ¯åˆ’åˆ†ä»»åŠ¡
 		for (int i = k + 1 + t_id; i < n; i += NUM_THREADS) {
-			// ÏûÈ¥
+			// æ¶ˆåŽ»
 			for (int j = k + 1; j < n; ++j) {
 				pA[i][j] = pA[i][j] - pA[i][k] * pA[k][j];
 			}
 			pA[i][k] = 0.0;
 		}
 
-		//µÚ¶þ¸öÍ¬²½µã
+		//ç¬¬äºŒä¸ªåŒæ­¥ç‚¹
 		pthread_barrier_wait(&barrier_Elimination);
 	}
 	pthread_exit(NULL);
 }
 
 int main() {
-	// ¶ÁÈëAºÍn
+	// è¯»å…¥Aå’Œn
 	// ...
 	srand(time(NULL));
 	for (int i = 0; i < n; i++) {
-		//A[i] = new float[n];
-		pA[i] = new float[n];
-	}
-
-	for (int i = 0; i < n; i++) {
-		pA[i][i] = 1.0;//¶Ô½ÇÏßÎª1.0
+		pA[i][i] = 1.0;//å¯¹è§’çº¿ä¸º1.0
 		for (int j = 0; j < n; j++) {
-			if (j >= i)pA[i][j] = rand() % 10;
-			else pA[i][j] = 0;
+			if (j > i)pA[i][j] = rand() % 10;
+			else if(j<i)pA[i][j] = 0;
 		}
 	}
-	//ÉÏÈý½Ç¾ØÕó
+	//ä¸Šä¸‰è§’çŸ©é˜µ
 
 	for (int k = 0; k < n; k++) {
 		for (int i = k + 1; i < n; i++) {
@@ -75,11 +68,11 @@ int main() {
 		}
 	}
 
-	//³õÊ¼»¯barrier
+	//åˆå§‹åŒ–barrier
 	pthread_barrier_init(&barrier_Divsion, NULL, NUM_THREADS);
 	pthread_barrier_init(&barrier_Elimination, NULL, NUM_THREADS);
 
-	// ´´½¨Ïß³Ì
+	// åˆ›å»ºçº¿ç¨‹
 	pthread_t handles[NUM_THREADS];
 	threadParam_t param[NUM_THREADS];
 	for (int t_id = 0; t_id < NUM_THREADS; t_id++) {
@@ -91,7 +84,7 @@ int main() {
 		pthread_join(handles[t_id], NULL);
 	}
 
-	//Ïú»ÙËùÓÐµÄbarrier
+	//é”€æ¯æ‰€æœ‰çš„barrier
 	pthread_barrier_destroy(&barrier_Divsion);
 	pthread_barrier_destroy(&barrier_Elimination);
 	return 0;
